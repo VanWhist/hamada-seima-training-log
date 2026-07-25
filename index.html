@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>浜田誠真 ウエイトトレーニングログ</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card2: #263349;
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --text: #f1f5f9;
+    --text-dim: #94a3b8;
+    --danger: #f87171;
+    --warn: #fbbf24;
+    --ok: #34d399;
+    --border: #334155;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding-bottom: 40px;
+  }
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: rgba(15,23,42,0.95);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 {
+    font-size: 17px;
+    margin: 0;
+    font-weight: 700;
+  }
+  header .sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  #refreshBtn {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 18px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #refreshBtn.spinning { animation: spin 0.8s linear infinite; opacity: 0.6; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  nav.tabs {
+    display: flex;
+    gap: 8px;
+    padding: 10px 16px;
+  }
+  nav.tabs button {
+    flex: 1;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text-dim);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  nav.tabs button.active {
+    background: var(--accent);
+    color: #06131f;
+    border-color: var(--accent);
+  }
+
+  main { padding: 0 16px; max-width: 640px; margin: 0 auto; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .card h2 {
+    font-size: 14px;
+    margin: 0 0 12px;
+    color: var(--text-dim);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  label.field {
+    display: block;
+    margin-bottom: 12px;
+  }
+  label.field span {
+    display: block;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  select, input[type=date], input[type=number] {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card2);
+    color: var(--text);
+    font-size: 15px;
+  }
+
+  .set-row {
+    display: grid;
+    grid-template-columns: 28px 1fr 1fr 1fr 32px;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .set-row .set-idx {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .set-row input {
+    padding: 8px;
+    font-size: 14px;
+    text-align: center;
+  }
+  .set-row button.rm {
+    background: none;
+    border: none;
+    color: var(--danger);
+    font-size: 18px;
+  }
+  .set-labels {
+    display: grid;
+    grid-template-columns: 28px 1fr 1fr 1fr 32px;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    padding: 0 2px;
+  }
+  .set-labels span:nth-child(2), .set-labels span:nth-child(3), .set-labels span:nth-child(4) {
+    text-align: center;
+  }
+
+  #addSetBtn {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px dashed var(--border);
+    background: none;
+    color: var(--accent);
+    font-size: 14px;
+    margin: 6px 0 14px;
+  }
+
+  #warningBanner {
+    display: none;
+    background: rgba(251,191,36,0.12);
+    border: 1px solid var(--warn);
+    color: var(--warn);
+    font-size: 12.5px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    line-height: 1.5;
+  }
+
+  #saveBtn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent);
+    color: #06131f;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  #saveBtn:disabled { opacity: 0.5; }
+
+  .prev-box {
+    font-size: 13px;
+    line-height: 1.8;
+  }
+  .prev-box .goal {
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: rgba(56,189,248,0.1);
+    border-radius: 8px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  canvas { width: 100%; height: 180px; display: block; }
+
+  table.rec-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  table.rec-table th, table.rec-table td {
+    padding: 8px 4px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  table.rec-table th { color: var(--text-dim); font-weight: 600; }
+  table.rec-table .edit-btn {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 15px;
+  }
+
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--card2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.25s;
+    max-width: 90%;
+    text-align: center;
+    z-index: 100;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 50;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-sheet {
+    background: var(--card);
+    border-radius: 16px 16px 0 0;
+    padding: 18px 16px 24px;
+    width: 100%;
+    max-width: 640px;
+    max-height: 88vh;
+    overflow-y: auto;
+  }
+  .modal-sheet h3 {
+    margin: 0 0 14px;
+    font-size: 15px;
+  }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .modal-actions button {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  #editSaveBtn { background: var(--accent); color: #06131f; }
+  #editCancelBtn { background: var(--card2); color: var(--text); border: 1px solid var(--border) !important; }
+  #editDeleteBtn { background: rgba(248,113,113,0.15); color: var(--danger); width: 100%; margin-top: 10px; border: 1px solid var(--danger); }
+
+  .empty-state {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 13px;
+    padding: 20px 0;
+  }
+
+  select#pullupType { margin-top: -2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>浜田誠真</h1>
+    <div class="sub">ウエイトトレーニングログ</div>
+  </div>
+  <button id="refreshBtn" title="最新データに更新">🔄</button>
+</header>
+
+<nav class="tabs">
+  <button id="tabRecordBtn" class="active">記録</button>
+  <button id="tabDashboardBtn">ダッシュボード</button>
+</nav>
+
+<main>
+
+  <!-- 記録タブ -->
+  <div id="viewRecord" class="view active">
+
+    <div class="card">
+      <h2>種目を選ぶ</h2>
+      <label class="field">
+        <span>種目</span>
+        <select id="exerciseSelect"></select>
+      </label>
+      <label class="field" id="pullupTypeField" style="display:none;">
+        <span>懸垂のタイプ</span>
+        <select id="pullupType">
+          <option>自重</option>
+          <option>加重</option>
+          <option>補助</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>日付</span>
+        <input type="date" id="dateInput">
+      </label>
+    </div>
+
+    <div class="card">
+      <h2>前回の記録・次回の目標</h2>
+      <div class="prev-box" id="prevBox">読み込み中...</div>
+    </div>
+
+    <div class="card">
+      <h2>セット記録</h2>
+      <div class="set-labels" id="setLabels">
+        <span>#</span><span>重量kg</span><span>回数</span><span>RPE</span><span></span>
+      </div>
+      <div id="setsContainer"></div>
+      <button id="addSetBtn">＋ セットを追加</button>
+      <div id="warningBanner"></div>
+      <button id="saveBtn">この内容を保存する</button>
+    </div>
+
+  </div>
+
+  <!-- ダッシュボードタブ -->
+  <div id="viewDashboard" class="view">
+
+    <div class="card">
+      <h2>種目を選ぶ</h2>
+      <select id="dashExerciseSelect"></select>
+      <label class="field" id="dashPullupTypeField" style="display:none; margin-top:10px;">
+        <span>懸垂のタイプ</span>
+        <select id="dashPullupType">
+          <option>自重</option>
+          <option>加重</option>
+          <option>補助</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="card" id="oneRmCard">
+      <h2>推定1RM推移（Epley式）</h2>
+      <canvas id="oneRmChart"></canvas>
+    </div>
+
+    <div class="card" id="volumeCard">
+      <h2>総重量（ボリューム）推移</h2>
+      <canvas id="volumeChart"></canvas>
+    </div>
+
+    <div class="card" id="repsCard" style="display:none;">
+      <h2>総回数・平均RPE推移</h2>
+      <canvas id="repsChart"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>直近の記録</h2>
+      <div id="recTableWrap"></div>
+    </div>
+
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<!-- 編集モーダル -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-sheet">
+    <h3>記録を編集</h3>
+    <label class="field">
+      <span>日付</span>
+      <input type="date" id="editDate">
+    </label>
+    <label class="field">
+      <span>種目</span>
+      <select id="editExercise"></select>
+    </label>
+    <label class="field" id="editPullupTypeField" style="display:none;">
+      <span>懸垂のタイプ</span>
+      <select id="editPullupType">
+        <option>自重</option>
+        <option>加重</option>
+        <option>補助</option>
+      </select>
+    </label>
+    <div class="set-labels">
+      <span>#</span><span>重量kg</span><span>回数</span><span>RPE</span><span></span>
+    </div>
+    <div id="editSetsContainer"></div>
+    <button id="editAddSetBtn" style="width:100%;padding:10px;border-radius:8px;border:1px dashed var(--border);background:none;color:var(--accent);font-size:14px;margin:6px 0;">＋ セットを追加</button>
+    <div class="modal-actions">
+      <button id="editCancelBtn">キャンセル</button>
+      <button id="editSaveBtn">保存する</button>
+    </div>
+    <button id="editDeleteBtn">この記録を削除する</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ============ 設定 ============
+  var API_URL = 'https://script.google.com/macros/s/AKfycbx3KzFDr-SxJWf7UEgZPQRrh-5xsSFUO469uo8Lw5bZJc2qfvAbgct2G6MYG--YzR8M/exec';
+  var DAY_VALUE = 'FULL'; // 画面には出さない。将来DAYを復活させる場合に備えて内部データにのみ保持する（ChatGPTとの相談で確定した方針）。
+
+  var EXERCISES = ['スクワット', 'ベンチプレス', '懸垂', 'ベントオーバーロー', 'デッドリフト'];
+  var PULLUP_TYPES = ['自重', '加重', '補助'];
+
+  function isPullup(ex) { return ex === '懸垂'; }
+  function isBodyweightRecord(ex, note) {
+    if (!isPullup(ex)) return false;
+    var type = note || '自重';
+    return type === '自重' || type === '補助';
+  }
+
+  // ============ 状態 ============
+  var allRecords = [];
+  var sets = []; // {weight, reps, rpe}
+  var setsExercise = null;
+  var setsPullupType = null;
+  var editingRecordKey = null; // {date, exercise, note}
+
+  // ============ 初期化 ============
+  function populateExerciseSelects() {
+    [document.getElementById('exerciseSelect'), document.getElementById('dashExerciseSelect'), document.getElementById('editExercise')].forEach(function (sel) {
+      sel.innerHTML = '';
+      EXERCISES.forEach(function (ex) {
+        var opt = document.createElement('option');
+        opt.value = ex; opt.textContent = ex;
+        sel.appendChild(opt);
+      });
+    });
+  }
+
+  function todayStr() {
+    var d = new Date();
+    var tzOffset = d.getTimezoneOffset() * 60000;
+    var local = new Date(d.getTime() - tzOffset);
+    return local.toISOString().slice(0, 10);
+  }
+
+  function initSets() {
+    sets = [{ weight: '', reps: '', rpe: '' }, { weight: '', reps: '', rpe: '' }, { weight: '', reps: '', rpe: '' }];
+    markSetsContext();
+    renderSets();
+  }
+
+  function markSetsContext() {
+    setsExercise = document.getElementById('exerciseSelect').value;
+    setsPullupType = isPullup(setsExercise) ? document.getElementById('pullupType').value : null;
+  }
+
+  // ============ RPEクランプ ============
+  function clampRpe(raw) {
+    if (raw === '' || raw === null || raw === undefined) return { value: '', changed: false };
+    var n = parseFloat(raw);
+    if (isNaN(n)) return { value: '', changed: false };
+    var orig = n;
+    n = Math.round(n * 2) / 2; // 0.5刻み
+    if (n < 1) n = 1;
+    if (n > 10) n = 10;
+    return { value: n, changed: n !== orig };
+  }
+
+  // ============ セット行の描画 ============
+  function renderSets() {
+    var wrap = document.getElementById('setsContainer');
+    wrap.innerHTML = '';
+    sets.forEach(function (s, i) {
+      var row = document.createElement('div');
+      row.className = 'set-row';
+      row.innerHTML =
+        '<div class="set-idx">' + (i + 1) + '</div>' +
+        '<input type="number" inputmode="decimal" step="0.5" placeholder="kg" value="' + s.weight + '" data-field="weight" data-i="' + i + '">' +
+        '<input type="number" inputmode="numeric" placeholder="回" value="' + s.reps + '" data-field="reps" data-i="' + i + '">' +
+        '<input type="number" inputmode="decimal" step="0.5" min="1" max="10" placeholder="RPE" value="' + s.rpe + '" data-field="rpe" data-i="' + i + '">' +
+        '<button class="rm" data-i="' + i + '">×</button>';
+      wrap.appendChild(row);
+    });
+
+    wrap.querySelectorAll('input').forEach(function (inp) {
+      inp.addEventListener('change', function () {
+        updateSet(parseInt(inp.dataset.i, 10), inp.dataset.field, inp.value);
+      });
+    });
+    wrap.querySelectorAll('button.rm').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var i = parseInt(btn.dataset.i, 10);
+        sets.splice(i, 1);
+        markSetsContext();
+        renderSets();
+      });
+    });
+
+    // 重量欄の表示/非表示（自重/補助の懸垂は重量なし）
+    var ex = document.getElementById('exerciseSelect').value;
+    var pullupType = isPullup(ex) ? document.getElementById('pullupType').value : null;
+    var weightHidden = isPullup(ex) && (pullupType === '自重' || pullupType === '補助');
+    wrap.querySelectorAll('input[data-field="weight"]').forEach(function (inp) {
+      inp.closest ? null : null;
+    });
+    var labelsWeight = document.querySelectorAll('#setLabels span')[1];
+    if (weightHidden) {
+      wrap.querySelectorAll('input[data-field="weight"]').forEach(function (inp) { inp.style.visibility = 'hidden'; });
+    } else {
+      wrap.querySelectorAll('input[data-field="weight"]').forEach(function (inp) { inp.style.visibility = 'visible'; });
+    }
+
+    checkWarningBanner();
+  }
+
+  function updateSet(i, field, value) {
+    if (field === 'rpe') {
+      var clamped = clampRpe(value);
+      sets[i][field] = clamped.value;
+      if (clamped.changed) {
+        showToast('RPEは1〜10の範囲・0.5刻みに補正しました');
+        renderSets();
+        return;
+      }
+    } else {
+      sets[i][field] = value;
+    }
+    markSetsContext();
+    checkWarningBanner();
+  }
+
+  function checkWarningBanner() {
+    var banner = document.getElementById('warningBanner');
+    var currentEx = document.getElementById('exerciseSelect').value;
+    var hasInput = sets.some(function (s) { return s.weight !== '' || s.reps !== '' || s.rpe !== ''; });
+    if (setsExercise && setsExercise !== currentEx && hasInput) {
+      banner.style.display = 'block';
+      banner.textContent = '⚠️ このセットは「' + setsExercise + '」で入力したものです。このまま保存すると「' + currentEx + '」として記録されます。';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+
+  // ============ 通信 ============
+  function apiPost(body) {
+    return fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json(); });
+  }
+
+  function loadRecords() {
+    return fetch(API_URL)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        allRecords = (data.records || []).map(function (r) {
+          return {
+            date: r.date, day: r.day, exercise: r.exercise,
+            setNumber: Number(r.setNumber), weight: r.weight === '' ? null : Number(r.weight),
+            reps: r.reps === '' ? null : Number(r.reps), rpe: r.rpe === '' ? null : Number(r.rpe),
+            note: r.note || '', id: r.id
+          };
+        });
+        return true;
+      })
+      .catch(function (err) {
+        console.error(err);
+        return false;
+      });
+  }
+
+  // ============ 保存 ============
+  function saveRecord() {
+    var ex = document.getElementById('exerciseSelect').value;
+    var date = document.getElementById('dateInput').value || todayStr();
+    var note = isPullup(ex) ? document.getElementById('pullupType').value : '';
+    var validSets = sets.filter(function (s) { return s.reps !== '' && s.reps !== null; });
+
+    if (validSets.length === 0) {
+      showToast('少なくとも1セットは回数を入力してください');
+      return;
+    }
+
+    var rows = validSets.map(function (s, i) {
+      return {
+        date: date, day: DAY_VALUE, exercise: ex, setNumber: i + 1,
+        weight: s.weight === '' ? '' : s.weight, reps: s.reps, rpe: s.rpe === '' ? '' : s.rpe, note: note
+      };
+    });
+
+    var btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+    btn.textContent = '保存中...';
+
+    apiPost({ rows: rows }).then(function (res) {
+      btn.disabled = false;
+      btn.textContent = 'この内容を保存する';
+      if (res && res.status === 'ok') {
+        showToast('保存しました ✓');
+        initSets();
+        document.getElementById('warningBanner').style.display = 'none';
+        loadRecords().then(function () {
+          renderPrevBox();
+          if (document.getElementById('viewDashboard').classList.contains('active')) renderDashboard();
+        });
+      } else {
+        showToast('保存に失敗しました。通信状態を確認してください');
+      }
+    }).catch(function () {
+      btn.disabled = false;
+      btn.textContent = 'この内容を保存する';
+      showToast('保存に失敗しました。通信状態を確認してください');
+    });
+  }
+
+  // ============ 前回記録・次回目標 ============
+  function epley1rm(weight, reps) {
+    if (!weight || !reps) return 0;
+    return weight * (1 + reps / 30);
+  }
+
+  function recordsFor(exercise, pullupType) {
+    return allRecords.filter(function (r) {
+      if (r.exercise !== exercise) return false;
+      if (isPullup(exercise)) {
+        var t = r.note || '自重';
+        return t === (pullupType || '自重');
+      }
+      return true;
+    });
+  }
+
+  function groupByDate(records) {
+    var map = {};
+    records.forEach(function (r) {
+      if (!map[r.date]) map[r.date] = [];
+      map[r.date].push(r);
+    });
+    var dates = Object.keys(map).sort();
+    return dates.map(function (d) { return { date: d, sets: map[d] }; });
+  }
+
+  function renderPrevBox() {
+    var ex = document.getElementById('exerciseSelect').value;
+    var pullupType = isPullup(ex) ? document.getElementById('pullupType').value : null;
+    var recs = recordsFor(ex, pullupType);
+    var box = document.getElementById('prevBox');
+    var grouped = groupByDate(recs);
+
+    if (grouped.length === 0) {
+      box.innerHTML = 'まだ記録がありません。今日が最初の記録です！';
+      return;
+    }
+
+    var last = grouped[grouped.length - 1];
+    var weightless = isBodyweightRecord(ex, pullupType);
+    var html = '<div>前回（' + last.date + '）</div>';
+    last.sets.forEach(function (s) {
+      if (weightless) {
+        html += '<div>・' + s.reps + '回 (RPE ' + (s.rpe || '-') + ')</div>';
+      } else {
+        html += '<div>・' + s.weight + 'kg × ' + s.reps + '回 (RPE ' + (s.rpe || '-') + ')</div>';
+      }
+    });
+
+    // 次回目標の自動提案
+    var allMet = last.sets.every(function (s) { return s.reps >= 12; });
+    var avgRpe = last.sets.reduce(function (a, s) { return a + (s.rpe || 0); }, 0) / last.sets.length;
+    var goal;
+    if (weightless) {
+      goal = allMet && avgRpe < 9 ? '次回は回数を増やすか、負荷（加重/補助軽減）を上げてみましょう' : '次回も同じ条件で回数アップを狙いましょう';
+    } else if (allMet && avgRpe < 9) {
+      var inc = ex === 'デッドリフト' ? 5 : 2.5;
+      var lastWeight = last.sets[0].weight || 0;
+      goal = '次回は +' + inc + 'kg (' + (lastWeight + inc) + 'kg) に挑戦しましょう';
+    } else if (!allMet || avgRpe >= 9) {
+      goal = '次回は同じ重量を維持しましょう';
+    } else {
+      goal = '次回は同じ重量で回数アップを狙いましょう';
+    }
+    html += '<div class="goal">🎯 ' + goal + '</div>';
+    box.innerHTML = html;
+  }
+
+  // ============ ダッシュボード ============
+  function syncDashboardExerciseFromRecord() {
+    var recEx = document.getElementById('exerciseSelect').value;
+    var dashSel = document.getElementById('dashExerciseSelect');
+    dashSel.value = recEx;
+    if (isPullup(recEx)) {
+      document.getElementById('dashPullupType').value = document.getElementById('pullupType').value;
+    }
+  }
+
+  function updatePullupFieldVisibility(selectId, fieldId) {
+    var ex = document.getElementById(selectId).value;
+    document.getElementById(fieldId).style.display = isPullup(ex) ? 'block' : 'none';
+  }
+
+  function drawLineChart(canvas, points, opts) {
+    opts = opts || {};
+    var ctx = canvas.getContext('2d');
+    var dpr = window.devicePixelRatio || 1;
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, w, h);
+
+    if (points.length === 0) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '13px sans-serif';
+      ctx.fillText('データがありません', 10, h / 2);
+      return;
+    }
+
+    var pad = { l: 36, r: 10, t: 14, b: 22 };
+    var vals = points.map(function (p) { return p.y; });
+    var minY = Math.min.apply(null, vals);
+    var maxY = Math.max.apply(null, vals);
+    if (minY === maxY) { minY -= 1; maxY += 1; }
+    var rangeY = maxY - minY;
+    var plotW = w - pad.l - pad.r;
+    var plotH = h - pad.t - pad.b;
+
+    function xAt(i) { return pad.l + (points.length === 1 ? plotW / 2 : (plotW * i) / (points.length - 1)); }
+    function yAt(v) { return pad.t + plotH - ((v - minY) / rangeY) * plotH; }
+
+    // 軸
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, pad.t + plotH); ctx.lineTo(pad.l + plotW, pad.t + plotH);
+    ctx.stroke();
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '10px sans-serif';
+    ctx.fillText(Math.round(maxY), 2, pad.t + 8);
+    ctx.fillText(Math.round(minY), 2, pad.t + plotH);
+
+    // ライン
+    ctx.strokeStyle = opts.color || '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    points.forEach(function (p, i) {
+      var x = xAt(i), y = yAt(p.y);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    ctx.fillStyle = opts.color || '#38bdf8';
+    points.forEach(function (p, i) {
+      var x = xAt(i), y = yAt(p.y);
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // x軸ラベル（最初と最後）
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '9px sans-serif';
+    ctx.fillText(points[0].x, pad.l, h - 6);
+    if (points.length > 1) {
+      var lastLabel = points[points.length - 1].x;
+      var tw = ctx.measureText(lastLabel).width;
+      ctx.fillText(lastLabel, pad.l + plotW - tw, h - 6);
+    }
+  }
+
+  function renderDashboard() {
+    var ex = document.getElementById('dashExerciseSelect').value;
+    var pullupType = isPullup(ex) ? document.getElementById('dashPullupType').value : null;
+    var recs = recordsFor(ex, pullupType);
+    var grouped = groupByDate(recs);
+    var weightless = isBodyweightRecord(ex, pullupType);
+
+    document.getElementById('oneRmCard').style.display = weightless ? 'none' : 'block';
+    document.getElementById('volumeCard').style.display = weightless ? 'none' : 'block';
+    document.getElementById('repsCard').style.display = weightless ? 'block' : 'none';
+
+    if (weightless) {
+      var repsPoints = grouped.map(function (g) {
+        var totalReps = g.sets.reduce(function (a, s) { return a + (s.reps || 0); }, 0);
+        return { x: g.date.slice(5), y: totalReps };
+      });
+      drawLineChart(document.getElementById('repsChart'), repsPoints, { color: '#818cf8' });
+    } else {
+      var oneRmPoints = grouped.map(function (g) {
+        var best = Math.max.apply(null, g.sets.map(function (s) { return epley1rm(s.weight, s.reps); }));
+        return { x: g.date.slice(5), y: Math.round(best * 10) / 10 };
+      });
+      var volPoints = grouped.map(function (g) {
+        var vol = g.sets.reduce(function (a, s) { return a + (s.weight || 0) * (s.reps || 0); }, 0);
+        return { x: g.date.slice(5), y: vol };
+      });
+      drawLineChart(document.getElementById('oneRmChart'), oneRmPoints, { color: '#38bdf8' });
+      drawLineChart(document.getElementById('volumeChart'), volPoints, { color: '#34d399' });
+    }
+
+    renderRecentTable(grouped, weightless);
+  }
+
+  function renderRecentTable(grouped, weightless) {
+    var wrap = document.getElementById('recTableWrap');
+    var recent = grouped.slice(-8).reverse();
+    if (recent.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">記録がありません</div>';
+      return;
+    }
+    var html = '<table class="rec-table"><thead><tr><th>日付</th><th>内容</th><th></th></tr></thead><tbody>';
+    recent.forEach(function (g) {
+      var summary = g.sets.map(function (s) {
+        return weightless ? (s.reps + '回') : (s.weight + 'kg×' + s.reps);
+      }).join(' / ');
+      html += '<tr><td>' + g.date + '</td><td>' + summary + '</td><td><button class="edit-btn" data-date="' + g.date + '">✎</button></td></tr>';
+    });
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+
+    wrap.querySelectorAll('.edit-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () { openEditModal(btn.dataset.date); });
+    });
+  }
+
+  // ============ 編集モーダル ============
+  var editSets = [];
+
+  function openEditModal(date) {
+    var ex = document.getElementById('dashExerciseSelect').value;
+    var pullupType = isPullup(ex) ? document.getElementById('dashPullupType').value : null;
+    var recs = recordsFor(ex, pullupType).filter(function (r) { return r.date === date; });
+    if (recs.length === 0) return;
+
+    editingRecordKey = { date: date, exercise: ex, note: recs[0].note };
+    document.getElementById('editDate').value = date;
+    document.getElementById('editExercise').value = ex;
+    updatePullupFieldVisibility('editExercise', 'editPullupTypeField');
+    if (isPullup(ex)) document.getElementById('editPullupType').value = pullupType || '自重';
+
+    editSets = recs
+      .sort(function (a, b) { return a.setNumber - b.setNumber; })
+      .map(function (r) { return { weight: r.weight === null ? '' : r.weight, reps: r.reps === null ? '' : r.reps, rpe: r.rpe === null ? '' : r.rpe, id: r.id }; });
+
+    renderEditSets();
+    document.getElementById('editModal').classList.add('show');
+  }
+
+  function renderEditSets() {
+    var wrap = document.getElementById('editSetsContainer');
+    wrap.innerHTML = '';
+    editSets.forEach(function (s, i) {
+      var row = document.createElement('div');
+      row.className = 'set-row';
+      row.innerHTML =
+        '<div class="set-idx">' + (i + 1) + '</div>' +
+        '<input type="number" step="0.5" value="' + s.weight + '" data-field="weight" data-i="' + i + '">' +
+        '<input type="number" value="' + s.reps + '" data-field="reps" data-i="' + i + '">' +
+        '<input type="number" step="0.5" min="1" max="10" value="' + s.rpe + '" data-field="rpe" data-i="' + i + '">' +
+        '<button class="rm" data-i="' + i + '">×</button>';
+      wrap.appendChild(row);
+    });
+    wrap.querySelectorAll('input').forEach(function (inp) {
+      inp.addEventListener('change', function () { editUpdateSet(parseInt(inp.dataset.i, 10), inp.dataset.field, inp.value); });
+    });
+    wrap.querySelectorAll('button.rm').forEach(function (btn) {
+      btn.addEventListener('click', function () { editSets.splice(parseInt(btn.dataset.i, 10), 1); renderEditSets(); });
+    });
+  }
+
+  function editUpdateSet(i, field, value) {
+    if (field === 'rpe') {
+      var c = clampRpe(value);
+      editSets[i][field] = c.value;
+      if (c.changed) { showToast('RPEは1〜10の範囲・0.5刻みに補正しました'); renderEditSets(); return; }
+    } else {
+      editSets[i][field] = value;
+    }
+  }
+
+  function closeEditModal() {
+    document.getElementById('editModal').classList.remove('show');
+    editingRecordKey = null;
+  }
+
+  function saveEdit() {
+    var newDate = document.getElementById('editDate').value;
+    var newEx = document.getElementById('editExercise').value;
+    var newNote = isPullup(newEx) ? document.getElementById('editPullupType').value : '';
+    var validSets = editSets.filter(function (s) { return s.reps !== '' && s.reps !== null; });
+
+    if (validSets.length === 0) { showToast('少なくとも1セットは回数を入力してください'); return; }
+
+    var deleteIds = editSets.map(function (s) { return s.id; }).filter(Boolean);
+    var rows = validSets.map(function (s, i) {
+      return { date: newDate, day: DAY_VALUE, exercise: newEx, setNumber: i + 1, weight: s.weight === '' ? '' : s.weight, reps: s.reps, rpe: s.rpe === '' ? '' : s.rpe, note: newNote };
+    });
+
+    apiPost({ action: 'replaceSession', deleteIds: deleteIds, rows: rows }).then(function (res) {
+      if (res && res.status === 'ok') {
+        showToast('更新しました ✓');
+        closeEditModal();
+        loadRecords().then(function () {
+          document.getElementById('dashExerciseSelect').value = newEx;
+          updatePullupFieldVisibility('dashExerciseSelect', 'dashPullupTypeField');
+          if (isPullup(newEx)) document.getElementById('dashPullupType').value = newNote || '自重';
+          renderDashboard();
+        });
+      } else {
+        showToast('更新に失敗しました。通信状態を確認してください');
+      }
+    }).catch(function () { showToast('更新に失敗しました。通信状態を確認してください'); });
+  }
+
+  function deleteEdit() {
+    if (!confirm('この記録を削除しますか？この操作は取り消せません。')) return;
+    var deleteIds = editSets.map(function (s) { return s.id; }).filter(Boolean);
+    apiPost({ action: 'replaceSession', deleteIds: deleteIds, rows: [] }).then(function (res) {
+      if (res && res.status === 'ok') {
+        showToast('削除しました');
+        closeEditModal();
+        loadRecords().then(renderDashboard);
+      } else {
+        showToast('削除に失敗しました。通信状態を確認してください');
+      }
+    }).catch(function () { showToast('削除に失敗しました。通信状態を確認してください'); });
+  }
+
+  // ============ トースト ============
+  var toastTimer = null;
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 3200);
+  }
+
+  // ============ 手動更新 ============
+  var refreshing = false;
+  function manualRefresh() {
+    if (refreshing) return;
+    refreshing = true;
+    var btn = document.getElementById('refreshBtn');
+    btn.classList.add('spinning');
+    loadRecords().then(function (ok) {
+      refreshing = false;
+      btn.classList.remove('spinning');
+      if (ok) {
+        showToast('最新のデータに更新しました ✓');
+        if (document.getElementById('viewRecord').classList.contains('active')) renderPrevBox();
+        if (document.getElementById('viewDashboard').classList.contains('active')) renderDashboard();
+      } else {
+        showToast('更新に失敗しました。通信状態を確認してください');
+      }
+    });
+  }
+
+  // ============ タブ切替 ============
+  function switchTab(tab) {
+    var isRecord = tab === 'record';
+    document.getElementById('viewRecord').classList.toggle('active', isRecord);
+    document.getElementById('viewDashboard').classList.toggle('active', !isRecord);
+    document.getElementById('tabRecordBtn').classList.toggle('active', isRecord);
+    document.getElementById('tabDashboardBtn').classList.toggle('active', !isRecord);
+    if (!isRecord) {
+      syncDashboardExerciseFromRecord();
+      updatePullupFieldVisibility('dashExerciseSelect', 'dashPullupTypeField');
+      renderDashboard();
+    }
+  }
+
+  // ============ イベント登録・起動 ============
+  document.addEventListener('DOMContentLoaded', function () {
+    populateExerciseSelects();
+    document.getElementById('dateInput').value = todayStr();
+    initSets();
+
+    document.getElementById('tabRecordBtn').addEventListener('click', function () { switchTab('record'); });
+    document.getElementById('tabDashboardBtn').addEventListener('click', function () { switchTab('dashboard'); });
+
+    document.getElementById('exerciseSelect').addEventListener('change', function () {
+      updatePullupFieldVisibility('exerciseSelect', 'pullupTypeField');
+      renderSets();
+      renderPrevBox();
+    });
+    document.getElementById('pullupType').addEventListener('change', function () {
+      renderSets();
+      renderPrevBox();
+    });
+
+    document.getElementById('addSetBtn').addEventListener('click', function () {
+      sets.push({ weight: '', reps: '', rpe: '' });
+      renderSets();
+    });
+    document.getElementById('saveBtn').addEventListener('click', saveRecord);
+    document.getElementById('refreshBtn').addEventListener('click', manualRefresh);
+
+    document.getElementById('dashExerciseSelect').addEventListener('change', function () {
+      updatePullupFieldVisibility('dashExerciseSelect', 'dashPullupTypeField');
+      renderDashboard();
+    });
+    document.getElementById('dashPullupType').addEventListener('change', renderDashboard);
+
+    document.getElementById('editExercise').addEventListener('change', function () {
+      updatePullupFieldVisibility('editExercise', 'editPullupTypeField');
+    });
+    document.getElementById('editAddSetBtn').addEventListener('click', function () {
+      editSets.push({ weight: '', reps: '', rpe: '' });
+      renderEditSets();
+    });
+    document.getElementById('editCancelBtn').addEventListener('click', closeEditModal);
+    document.getElementById('editSaveBtn').addEventListener('click', saveEdit);
+    document.getElementById('editDeleteBtn').addEventListener('click', deleteEdit);
+
+    loadRecords().then(function () {
+      renderPrevBox();
+    });
+  });
+
+})();
+</script>
+</body>
+</html>
