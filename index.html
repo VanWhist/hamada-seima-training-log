@@ -475,6 +475,19 @@
     return type === '自重' || type === '補助';
   }
 
+  // ============ 次回目標ロジックの設定（筋肥大方針） ============
+  // 加重種目（スクワット/ベンチプレス/ベントオーバーロー/デッドリフト/懸垂・加重）共通の目標レップ帯。
+  // 筋肥大の定番レンジである8〜12回を採用（2026-07-25、Vanと相談の上で決定）。
+  var REP_TARGET = { min: 8, max: 12 };
+  // 懸垂（自重・補助）の目標回数。誠真選手はまだ自重で数回しかできないため、
+  // まずは「10回×3セット」を到達目標とする（2026-07-25、Vanと相談の上で決定）。
+  var PULLUP_BODYWEIGHT_TARGET_REPS = 10;
+  // 自重の最低回数がこれを下回る場合、チューブ等の補助を使った練習を提案する。
+  var PULLUP_LOW_REP_THRESHOLD = 6;
+  // 筋肥大に適したRPEのターゲットゾーン（限界近くまで追い込む）。7未満は物足りない、9超はきつすぎ。
+  var RPE_TARGET_LOW = 7;
+  var RPE_TARGET_HIGH = 9;
+
   // ============ 状態 ============
   var allRecords = [];
   var sets = []; // {weight, reps, rpe}
@@ -812,23 +825,75 @@
       }
     });
 
-    // 次回目標の自動提案
-    var allMet = last.sets.every(function (s) { return s.reps >= 12; });
+    // 次回目標の自動提案（筋肥大方針：目標レップ帯＋RPE7〜9のターゲットゾーンで判定）
     var avgRpe = last.sets.reduce(function (a, s) { return a + (s.rpe || 0); }, 0) / last.sets.length;
-    var goal;
-    if (weightless) {
-      goal = allMet && avgRpe < 9 ? '次回は回数を増やすか、負荷（加重/補助軽減）を上げてみましょう' : '次回も同じ条件で回数アップを狙いましょう';
-    } else if (allMet && avgRpe < 9) {
-      var inc = ex === 'デッドリフト' ? 5 : 2.5;
-      var lastWeight = last.sets[0].weight || 0;
-      goal = '次回は +' + inc + 'kg (' + (lastWeight + inc) + 'kg) に挑戦しましょう';
-    } else if (!allMet || avgRpe >= 9) {
-      goal = '次回は同じ重量を維持しましょう';
-    } else {
-      goal = '次回は同じ重量で回数アップを狙いましょう';
-    }
+    var repsArr = last.sets.map(function (s) { return s.reps || 0; });
+    var lastWeight = last.sets[0].weight || 0;
+    var goal = computeGoal(ex, pullupType, weightless, repsArr, avgRpe, lastWeight);
     html += '<div class="goal">🎯 ' + goal + '</div>';
     box.innerHTML = html;
+  }
+
+  // RPEが筋肥大ターゲットゾーン（7〜9）に対してどの位置にあるかを判定する。
+  // 'low'  = 7未満（物足りない／もっと追い込める）
+  // 'high' = 9より上（きつすぎる／ほぼ限界）
+  // 'target' = 7〜9（狙い通りの負荷）
+  function rpeTier(avgRpe) {
+    if (avgRpe < RPE_TARGET_LOW) return 'low';
+    if (avgRpe > RPE_TARGET_HIGH) return 'high';
+    return 'target';
+  }
+
+  // 次回目標コメントの本体。筋肥大方針（目標レップ帯に到達させてから負荷を上げるダブルプログレッション＋
+  // RPE7〜9のターゲットゾーン判定）に基づく。2026-07-25、Vanと相談の上で決定。
+  function computeGoal(ex, pullupType, weightless, repsArr, avgRpe, lastWeight) {
+    var tier = rpeTier(avgRpe);
+
+    if (weightless) {
+      // 懸垂（自重・補助）：目標は「10回×3セット」の達成
+      var target = PULLUP_BODYWEIGHT_TARGET_REPS;
+      var allMet = repsArr.every(function (r) { return r >= target; });
+      var minReps = Math.min.apply(null, repsArr);
+
+      if (allMet) {
+        if (tier === 'high') {
+          return '目標の' + target + '回はこなせていますが、かなりきつそうです。次回も同じ条件で' + target + '回×3セットを安定してこなせるようにしましょう';
+        }
+        if (pullupType === '補助') {
+          return '補助ありで' + target + '回×3セットを達成しています！次回は補助を少し弱くして（チューブを細くする、抵抗を弱める等）同じ回数に挑戦しましょう';
+        }
+        return '自重で' + target + '回×3セットを達成しています！次回は加重に挑戦するか、さらに回数を伸ばしてみましょう';
+      }
+
+      if (pullupType === '自重' && minReps < PULLUP_LOW_REP_THRESHOLD) {
+        return '自重ではまだ回数が少ないので、次回はチューブなどの補助を使って' + target + '回×3セットを目指す練習を取り入れてみましょう';
+      }
+
+      if (tier === 'low') {
+        return '余裕がありそうです。次回はもう少し回数を伸ばして' + target + '回×3セットを目指しましょう';
+      }
+      return '次回も同じ条件で' + target + '回×3セットを目指しましょう';
+    }
+
+    // 加重種目（スクワット/ベンチプレス/ベントオーバーロー/デッドリフト/懸垂・加重）：
+    // 筋肥大の定番レップ帯（8〜12回）に基づくダブルプログレッション
+    var allMet = repsArr.every(function (r) { return r >= REP_TARGET.max; });
+    var inc = ex === 'デッドリフト' ? 5 : 2.5;
+
+    if (allMet) {
+      if (tier === 'high') {
+        return REP_TARGET.max + '回はこなせていますが、かなりきつかったようです。次回はまず同じ重量で余裕を持って' + REP_TARGET.max + '回×3セットを目指しましょう';
+      }
+      return '次回は +' + inc + 'kg (' + (lastWeight + inc) + 'kg) に挑戦しましょう';
+    }
+
+    if (tier === 'low') {
+      return '余裕がありそうです。次回は同じ重量でもう少し回数を伸ばしてみましょう';
+    }
+    if (tier === 'high') {
+      return '次回は同じ重量を維持しましょう';
+    }
+    return '次回も同じ重量で回数アップ（目標' + REP_TARGET.max + '回）を狙いましょう';
   }
 
   // ============ ダッシュボード ============
