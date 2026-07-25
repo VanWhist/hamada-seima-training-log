@@ -640,11 +640,14 @@
   }
 
   function copyLastSet() {
-    if (sets.length === 0) {
+    var sourceIdx = -1;
+    for (var i = sets.length - 1; i >= 0; i--) {
+      if (setsHasInput([sets[i]])) { sourceIdx = i; break; }
+    }
+    if (sourceIdx === -1) {
       sets.push({ weight: '', reps: '', rpe: '' });
     } else {
-      var last = sets[sets.length - 1];
-      sets.push(cloneSet(last));
+      sets.push(cloneSet(sets[sourceIdx]));
     }
     persistActiveDraft();
     renderSets();
