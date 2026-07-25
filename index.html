@@ -160,15 +160,20 @@
     text-align: center;
   }
 
-  #addSetBtn {
-    width: 100%;
+  .set-actions {
+    display: flex;
+    gap: 8px;
+    margin: 6px 0 14px;
+  }
+  #addSetBtn, #copySetBtn {
+    flex: 1;
     padding: 10px;
     border-radius: 8px;
     border: 1px dashed var(--border);
     background: none;
     color: var(--accent);
-    font-size: 14px;
-    margin: 6px 0 14px;
+    font-size: 13px;
+    margin: 0;
   }
 
   #warningBanner {
@@ -182,6 +187,18 @@
     margin-bottom: 10px;
     line-height: 1.5;
   }
+
+  #saveConfirm {
+    display: none;
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--ok);
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+  #saveConfirm.show { display: block; }
+
+  #weeklySummaryBody { font-size: 13px; line-height: 1.9; }
 
   #saveBtn {
     width: 100%;
@@ -349,15 +366,24 @@
         <span>#</span><span>重量kg</span><span>回数</span><span>RPE</span><span></span>
       </div>
       <div id="setsContainer"></div>
-      <button id="addSetBtn">＋ セットを追加</button>
+      <div class="set-actions">
+        <button id="addSetBtn">＋ セットを追加</button>
+        <button id="copySetBtn">＋ 前のセットをコピー</button>
+      </div>
       <div id="warningBanner"></div>
       <button id="saveBtn">この内容を保存する</button>
+      <div id="saveConfirm"></div>
     </div>
 
   </div>
 
   <!-- ダッシュボードタブ -->
   <div id="viewDashboard" class="view">
+
+    <div class="card" id="weeklySummaryCard">
+      <h2>今週のトレーニング（直近7日間）</h2>
+      <div id="weeklySummaryBody">読み込み中...</div>
+    </div>
 
     <div class="card">
       <h2>種目を選ぶ</h2>
@@ -452,9 +478,49 @@
   // ============ 状態 ============
   var allRecords = [];
   var sets = []; // {weight, reps, rpe}
-  var setsExercise = null;
-  var setsPullupType = null;
   var editingRecordKey = null; // {date, exercise, note}
+
+  // ============ 下書き保護（種目切り替え時の入力保持＋オフライン復元） ============
+  var DRAFT_STORAGE_KEY = 'seima_drafts_v1';
+  var drafts = {}; // key -> [{weight,reps,rpe}, ...]
+  var activeKey = null;
+  var saveConfirmTimer = null;
+
+  function draftKey(ex, pullupType) { return ex + '|' + (pullupType || ''); }
+
+  function defaultSets() {
+    return [{ weight: '', reps: '', rpe: '' }, { weight: '', reps: '', rpe: '' }, { weight: '', reps: '', rpe: '' }];
+  }
+
+  function cloneSet(s) { return { weight: s.weight, reps: s.reps, rpe: s.rpe }; }
+
+  function setsHasInput(arr) {
+    return arr.some(function (s) { return s.weight !== '' || s.reps !== '' || s.rpe !== ''; });
+  }
+
+  function loadDraftsFromStorage() {
+    try {
+      var raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+      drafts = raw ? JSON.parse(raw) : {};
+    } catch (e) { drafts = {}; }
+  }
+
+  function saveDraftsToStorage() {
+    try { localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(drafts)); } catch (e) { /* 保存できなくても致命的ではない */ }
+  }
+
+  function persistActiveDraft() {
+    if (setsHasInput(sets)) {
+      drafts[activeKey] = sets.map(cloneSet);
+    } else {
+      delete drafts[activeKey];
+    }
+    saveDraftsToStorage();
+  }
+
+  function hasAnyDraftData() {
+    return Object.keys(drafts).some(function (k) { return drafts[k] && setsHasInput(drafts[k]); });
+  }
 
   // ============ 初期化 ============
   function populateExerciseSelects() {
@@ -476,14 +542,26 @@
   }
 
   function initSets() {
-    sets = [{ weight: '', reps: '', rpe: '' }, { weight: '', reps: '', rpe: '' }, { weight: '', reps: '', rpe: '' }];
-    markSetsContext();
+    var ex = document.getElementById('exerciseSelect').value;
+    var pt = isPullup(ex) ? document.getElementById('pullupType').value : null;
+    activeKey = draftKey(ex, pt);
+    sets = (drafts[activeKey] && drafts[activeKey].length) ? drafts[activeKey].map(cloneSet) : defaultSets();
     renderSets();
   }
 
-  function markSetsContext() {
-    setsExercise = document.getElementById('exerciseSelect').value;
-    setsPullupType = isPullup(setsExercise) ? document.getElementById('pullupType').value : null;
+  // 種目・懸垂タイプが変わったとき：現在の下書きは種目ごとに保持されているので、
+  // 入力済みセットを破棄せず、切り替え先の下書き（あれば）を読み込む
+  function onExerciseContextChange() {
+    updatePullupFieldVisibility('exerciseSelect', 'pullupTypeField');
+    var ex = document.getElementById('exerciseSelect').value;
+    var pt = isPullup(ex) ? document.getElementById('pullupType').value : null;
+    var newKey = draftKey(ex, pt);
+    if (newKey !== activeKey) {
+      activeKey = newKey;
+      sets = (drafts[activeKey] && drafts[activeKey].length) ? drafts[activeKey].map(cloneSet) : defaultSets();
+    }
+    renderSets();
+    renderPrevBox();
   }
 
   // ============ RPEクランプ ============
@@ -523,7 +601,7 @@
       btn.addEventListener('click', function () {
         var i = parseInt(btn.dataset.i, 10);
         sets.splice(i, 1);
-        markSetsContext();
+        persistActiveDraft();
         renderSets();
       });
     });
@@ -542,13 +620,14 @@
       wrap.querySelectorAll('input[data-field="weight"]').forEach(function (inp) { inp.style.visibility = 'visible'; });
     }
 
-    checkWarningBanner();
+    checkDuplicateNotice();
   }
 
   function updateSet(i, field, value) {
     if (field === 'rpe') {
       var clamped = clampRpe(value);
       sets[i][field] = clamped.value;
+      persistActiveDraft();
       if (clamped.changed) {
         showToast('RPEは1〜10の範囲・0.5刻みに補正しました');
         renderSets();
@@ -556,18 +635,31 @@
       }
     } else {
       sets[i][field] = value;
+      persistActiveDraft();
     }
-    markSetsContext();
-    checkWarningBanner();
   }
 
-  function checkWarningBanner() {
+  function copyLastSet() {
+    if (sets.length === 0) {
+      sets.push({ weight: '', reps: '', rpe: '' });
+    } else {
+      var last = sets[sets.length - 1];
+      sets.push(cloneSet(last));
+    }
+    persistActiveDraft();
+    renderSets();
+  }
+
+  // 同じ日付・同じ種目（懸垂はタイプも一致）の記録が既にある場合に注意を表示する
+  function checkDuplicateNotice() {
     var banner = document.getElementById('warningBanner');
-    var currentEx = document.getElementById('exerciseSelect').value;
-    var hasInput = sets.some(function (s) { return s.weight !== '' || s.reps !== '' || s.rpe !== ''; });
-    if (setsExercise && setsExercise !== currentEx && hasInput) {
+    var ex = document.getElementById('exerciseSelect').value;
+    var pt = isPullup(ex) ? document.getElementById('pullupType').value : '';
+    var date = document.getElementById('dateInput').value || todayStr();
+    var exists = allRecords.some(function (r) { return r.date === date && r.exercise === ex && (r.note || '') === pt; });
+    if (exists) {
       banner.style.display = 'block';
-      banner.textContent = '⚠️ このセットは「' + setsExercise + '」で入力したものです。このまま保存すると「' + currentEx + '」として記録されます。';
+      banner.textContent = '⚠️ ' + date + 'の' + ex + 'は既に記録があります。保存すると新しいセッションとして追加されます（既存記録を直したい場合はダッシュボードの編集機能をご利用ください）。';
     } else {
       banner.style.display = 'none';
     }
@@ -603,6 +695,11 @@
   }
 
   // ============ 保存 ============
+  function formatTime(d) {
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    return pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
   function saveRecord() {
     var ex = document.getElementById('exerciseSelect').value;
     var date = document.getElementById('dateInput').value || todayStr();
@@ -612,6 +709,12 @@
     if (validSets.length === 0) {
       showToast('少なくとも1セットは回数を入力してください');
       return;
+    }
+
+    var dupExists = allRecords.some(function (r) { return r.date === date && r.exercise === ex && (r.note || '') === note; });
+    if (dupExists) {
+      var proceed = confirm(date + 'の' + ex + 'の記録は既にあります。新しいセッションとして追加しますか？\n（キャンセルすると保存を中止します。既存記録を直したい場合はダッシュボードの編集機能をご利用ください）');
+      if (!proceed) return;
     }
 
     var rows = validSets.map(function (s, i) {
@@ -630,19 +733,29 @@
       btn.textContent = 'この内容を保存する';
       if (res && res.status === 'ok') {
         showToast('保存しました ✓');
-        initSets();
+        var confirmEl = document.getElementById('saveConfirm');
+        confirmEl.textContent = '✓ ' + date + 'の' + ex + 'を保存しました（' + formatTime(new Date()) + '）';
+        confirmEl.classList.add('show');
+        clearTimeout(saveConfirmTimer);
+        saveConfirmTimer = setTimeout(function () { confirmEl.classList.remove('show'); }, 6000);
+
+        delete drafts[activeKey];
+        saveDraftsToStorage();
+        sets = defaultSets();
+        renderSets();
         document.getElementById('warningBanner').style.display = 'none';
         loadRecords().then(function () {
           renderPrevBox();
+          checkDuplicateNotice();
           if (document.getElementById('viewDashboard').classList.contains('active')) renderDashboard();
         });
       } else {
-        showToast('保存に失敗しました。通信状態を確認してください');
+        showToast('保存に失敗しました。通信状態を確認してください。入力内容は消えていません');
       }
     }).catch(function () {
       btn.disabled = false;
       btn.textContent = 'この内容を保存する';
-      showToast('保存に失敗しました。通信状態を確認してください');
+      showToast('保存に失敗しました。通信状態を確認してください。入力内容は消えていません');
     });
   }
 
@@ -799,7 +912,94 @@
     }
   }
 
+  // ============ 週次サマリー（コーチ向け） ============
+  function daysAgoStr(n) {
+    var d = new Date();
+    d.setDate(d.getDate() - n);
+    var tzOffset = d.getTimezoneOffset() * 60000;
+    var local = new Date(d.getTime() - tzOffset);
+    return local.toISOString().slice(0, 10);
+  }
+
+  function computeWeeklySummary() {
+    var todayS = todayStr();
+    var start7 = daysAgoStr(6);
+    var prevStart = daysAgoStr(13);
+    var prevEnd = daysAgoStr(7);
+
+    function inRange(dateStr, start, end) { return dateStr >= start && dateStr <= end; }
+
+    var thisWeekRecs = allRecords.filter(function (r) { return inRange(r.date, start7, todayS); });
+    var prevWeekRecs = allRecords.filter(function (r) { return inRange(r.date, prevStart, prevEnd); });
+
+    var trainingDays = {};
+    thisWeekRecs.forEach(function (r) { trainingDays[r.date] = true; });
+    var trainingDayCount = Object.keys(trainingDays).length;
+    var totalSets = thisWeekRecs.length;
+
+    function volumeOf(recs) {
+      return recs.reduce(function (a, r) {
+        var weightless = isPullup(r.exercise) && (r.note || '自重') !== '加重';
+        if (weightless) return a;
+        return a + (r.weight || 0) * (r.reps || 0);
+      }, 0);
+    }
+    var volThis = volumeOf(thisWeekRecs);
+    var volPrev = volumeOf(prevWeekRecs);
+    var pctChange = volPrev > 0 ? Math.round(((volThis - volPrev) / volPrev) * 100) : null;
+
+    var rpeVals = thisWeekRecs.map(function (r) { return r.rpe; }).filter(function (v) { return v !== null && v !== undefined && v !== ''; });
+    var avgRpe = rpeVals.length ? (rpeVals.reduce(function (a, b) { return a + b; }, 0) / rpeVals.length) : null;
+
+    var bestPr = null;
+    EXERCISES.forEach(function (ex) {
+      if (isPullup(ex)) return; // 懸垂はタイプが混在するため対象外
+      var exRecs = allRecords.filter(function (r) { return r.exercise === ex; });
+      var beforeWeek = exRecs.filter(function (r) { return r.date < start7; });
+      var thisWeekExRecs = exRecs.filter(function (r) { return inRange(r.date, start7, todayS); });
+      if (thisWeekExRecs.length === 0) return;
+      var bestBefore = beforeWeek.reduce(function (m, r) { return Math.max(m, epley1rm(r.weight, r.reps)); }, 0);
+      var bestNow = 0, bestNowRec = null;
+      thisWeekExRecs.forEach(function (r) {
+        var v = epley1rm(r.weight, r.reps);
+        if (v > bestNow) { bestNow = v; bestNowRec = r; }
+      });
+      if (bestNow > bestBefore && bestNowRec && (!bestPr || bestNow > bestPr.est)) {
+        bestPr = { exercise: ex, weight: bestNowRec.weight, reps: bestNowRec.reps, est: bestNow };
+      }
+    });
+
+    var needsAttention = [];
+    if (pctChange !== null && pctChange >= 30) needsAttention.push('前週よりボリュームが' + pctChange + '%増加しています。負荷を確認してください。');
+    if (avgRpe !== null && avgRpe >= 9 && trainingDayCount >= 2) needsAttention.push('平均RPEが' + avgRpe.toFixed(1) + 'と高めです。回復状況を確認してください。');
+
+    return {
+      trainingDayCount: trainingDayCount, totalSets: totalSets,
+      volThis: volThis, pctChange: pctChange, avgRpe: avgRpe,
+      bestPr: bestPr, needsAttention: needsAttention
+    };
+  }
+
+  function renderWeeklySummary() {
+    var s = computeWeeklySummary();
+    var body = document.getElementById('weeklySummaryBody');
+    var html = '';
+    html += '<div>実施日数：' + s.trainingDayCount + '日 / 総セット数：' + s.totalSets + 'セット</div>';
+    html += '<div>総ボリューム：' + Math.round(s.volThis) + 'kg';
+    if (s.pctChange !== null) html += '（前週比 ' + (s.pctChange >= 0 ? '+' : '') + s.pctChange + '%）';
+    html += '</div>';
+    html += '<div>平均RPE：' + (s.avgRpe !== null ? s.avgRpe.toFixed(1) : '-') + '</div>';
+    if (s.bestPr) {
+      html += '<div>自己ベスト更新：' + s.bestPr.exercise + ' ' + s.bestPr.weight + 'kg×' + s.bestPr.reps + '</div>';
+    }
+    s.needsAttention.forEach(function (msg) {
+      html += '<div style="color:var(--warn);margin-top:6px;">⚠️ ' + msg + '</div>';
+    });
+    body.innerHTML = html;
+  }
+
   function renderDashboard() {
+    renderWeeklySummary();
     var ex = document.getElementById('dashExerciseSelect').value;
     var pullupType = isPullup(ex) ? document.getElementById('dashPullupType').value : null;
     var recs = recordsFor(ex, pullupType);
@@ -885,9 +1085,9 @@
       row.className = 'set-row';
       row.innerHTML =
         '<div class="set-idx">' + (i + 1) + '</div>' +
-        '<input type="number" step="0.5" value="' + s.weight + '" data-field="weight" data-i="' + i + '">' +
-        '<input type="number" value="' + s.reps + '" data-field="reps" data-i="' + i + '">' +
-        '<input type="number" step="0.5" min="1" max="10" value="' + s.rpe + '" data-field="rpe" data-i="' + i + '">' +
+        '<input type="number" inputmode="decimal" step="0.5" value="' + s.weight + '" data-field="weight" data-i="' + i + '">' +
+        '<input type="number" inputmode="numeric" value="' + s.reps + '" data-field="reps" data-i="' + i + '">' +
+        '<input type="number" inputmode="decimal" step="0.5" min="1" max="10" value="' + s.rpe + '" data-field="rpe" data-i="' + i + '">' +
         '<button class="rm" data-i="' + i + '">×</button>';
       wrap.appendChild(row);
     });
@@ -1003,27 +1203,28 @@
 
   // ============ イベント登録・起動 ============
   document.addEventListener('DOMContentLoaded', function () {
+    loadDraftsFromStorage();
     populateExerciseSelects();
     document.getElementById('dateInput').value = todayStr();
     initSets();
 
+    if (hasAnyDraftData()) {
+      showToast('前回保存されなかった入力を復元しました');
+    }
+
     document.getElementById('tabRecordBtn').addEventListener('click', function () { switchTab('record'); });
     document.getElementById('tabDashboardBtn').addEventListener('click', function () { switchTab('dashboard'); });
 
-    document.getElementById('exerciseSelect').addEventListener('change', function () {
-      updatePullupFieldVisibility('exerciseSelect', 'pullupTypeField');
-      renderSets();
-      renderPrevBox();
-    });
-    document.getElementById('pullupType').addEventListener('change', function () {
-      renderSets();
-      renderPrevBox();
-    });
+    document.getElementById('exerciseSelect').addEventListener('change', onExerciseContextChange);
+    document.getElementById('pullupType').addEventListener('change', onExerciseContextChange);
+    document.getElementById('dateInput').addEventListener('change', checkDuplicateNotice);
 
     document.getElementById('addSetBtn').addEventListener('click', function () {
       sets.push({ weight: '', reps: '', rpe: '' });
+      persistActiveDraft();
       renderSets();
     });
+    document.getElementById('copySetBtn').addEventListener('click', copyLastSet);
     document.getElementById('saveBtn').addEventListener('click', saveRecord);
     document.getElementById('refreshBtn').addEventListener('click', manualRefresh);
 
